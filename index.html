@@ -1,25 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Free Zone Classic</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
+  <title>Free Zone Classic - FZC v2</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="login-screen">
-        <h1>FREE ZONE CLASSIC</h1>
-        <input type="text" id="player-name" placeholder="Enter your name" />
-        <button id="start-btn">START</button>
+  <div id="login-screen">
+    <h1>FREE ZONE CLASSIC</h1>
+    <input type="text" id="player-name" placeholder="Enter your name" />
+    <button id="start-btn">START</button>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="controls">
+    <canvas id="joystick" width="140" height="140"></canvas>
+    <div id="rightButtons">
+      <button id="shoot-btn" class="action">SHOOT</button>
+      <button id="kit-btn" class="action">KIT</button>
+      <button id="jump-btn" class="action">JUMP</button>
     </div>
+  </div>
 
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="controls">
-        <div id="joystick"></div>
-        <button id="shoot-btn">SHOOT</button>
-    </div>
-
-    <script src="game.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
