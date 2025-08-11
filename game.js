@@ -1,156 +1,156 @@
-/* FZC v2 - top-down prototype
-   Place player.png, bot.png, pet.png in same folder for sprites.
+/* FZC v2 - improved mobile behavior
+   Place player.png, bot.png, pet.png in same folder for sprites (recommended 40-64px)
 */
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
 const joystickCanvas = document.getElementById('joystick');
 const jctx = joystickCanvas.getContext('2d');
-const shootBtn = document.getElementById('shoot-btn');
+
 const startBtn = document.getElementById('start-btn');
 const nameInput = document.getElementById('player-name');
+const shootBtn = document.getElementById('shoot-btn');
+const kitBtn = document.getElementById('kit-btn');
+const jumpBtn = document.getElementById('jump-btn');
 
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - (window.innerWidth > 900 ? 90 : 140);
+let W = window.innerWidth;
+let H = window.innerHeight;
+function resizeCanvas(){
+  W = window.innerWidth;
+  H = window.innerHeight;
+  // keep canvas full screen
+  canvas.width = W;
+  canvas.height = H;
 }
-resize();
-window.addEventListener('resize', resize);
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-/* -------- Resources (sprites) -------- */
-const playerImg = new Image();
-playerImg.src = 'player.png'; // 40x40 recommended
+/* ---------- Resources ---------- */
+const playerImg = new Image(); playerImg.src = 'player.png';
+const botImg = new Image(); botImg.src = 'bot.png';
+const petImg = new Image(); petImg.src = 'pet.png';
 
-const botImg = new Image();
-botImg.src = 'bot.png'; // 40x40 recommended
-
-const petImg = new Image();
-petImg.src = 'pet.png'; // 28x28 recommended
-
-/* -------- Game state -------- */
-let gameRunning = false;
-const settings = {
-  maxPlayers: 15,
-  botCount: 14,
-  mapW: 2000,
-  mapH: 1200,
-  bulletSpeed: 600, // px/s
-  playerSpeed: 220,
-  botSpeedMin: 60,
-  botSpeedMax: 120,
-  tickScale: 1
+/* ---------- Settings & state ---------- */
+const SETTINGS = {
+  BOT_COUNT: 14,
+  MAP_W: 1800,
+  MAP_H: 1200,
+  PLAYER_SPEED: 220,
+  BOT_SPEED_MIN: 50,
+  BOT_SPEED_MAX: 120,
+  BULLET_SPEED: 700,
+  PLAYER_COOLDOWN: 200
 };
 
-let viewport = { x:0,y:0,w:canvas.width,h:canvas.height };
+let gameRunning = false;
+let viewport = { x:0, y:0, w:W, h:H };
 
+/* ---------- Entities ---------- */
 class Entity {
-  constructor(x,y,r,color) {
-    this.x=x; this.y=y; this.r=r; this.color=color; this.hp=100;
-    this.vx=0; this.vy=0; this.lastShot=0;
+  constructor(x,y,r,img){
+    this.x = x; this.y = y; this.r = r; this.img = img;
+    this.vx = 0; this.vy = 0; this.hp = 100; this.lastShot = 0; this.team = 'bot';
   }
-  drawSprite(img, cam, w, h){
-    if(!img.complete){ // fallback circle
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.arc(this.x-cam.x, this.y-cam.y, this.r, 0, Math.PI*2);
-      ctx.fill();
-      return;
+  draw(cam, w=40, h=40){
+    if(this.img && this.img.complete){
+      ctx.drawImage(this.img, this.x - cam.x - w/2, this.y - cam.y - h/2, w, h);
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, this.r, 0, Math.PI*2); ctx.fill();
     }
-    ctx.drawImage(img, this.x-cam.x - w/2, this.y-cam.y - h/2, w, h);
+    // hp bar
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(this.x - cam.x - this.r, this.y - cam.y - this.r - 9, this.r*2, 6);
+    ctx.fillStyle = '#b8860b'; ctx.fillRect(this.x - cam.x - this.r, this.y - cam.y - this.r - 9, (this.r*2)*(this.hp/100), 6);
   }
 }
 
-let player = new Entity(settings.mapW/2, settings.mapH/2, 18, '#ffd39b');
+let player = new Entity(SETTINGS.MAP_W/2, SETTINGS.MAP_H/2, 18, playerImg);
 player.team = 'player';
-player.hp = 100;
-
-let pet = { x: player.x+40, y: player.y+20, r:12 };
+let pet = { x: player.x + 40, y: player.y + 24, r: 12, img: petImg };
 
 let bots = [];
 let bullets = [];
 
-/* -------- Spawn bots -------- */
-function spawnBots(count){
+/* ---------- Helpers ---------- */
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* ---------- Spawn bots ---------- */
+function spawnBots(n){
   bots = [];
-  for(let i=0;i<count;i++){
-    const b = new Entity(rand(100, settings.mapW-100), rand(100, settings.mapH-100), 16, '#c94c4c');
-    b.speed = rand(settings.botSpeedMin, settings.botSpeedMax);
+  for(let i=0;i<n;i++){
+    const b = new Entity(rand(80, SETTINGS.MAP_W-80), rand(80, SETTINGS.MAP_H-80), 16, botImg);
+    b.speed = rand(SETTINGS.BOT_SPEED_MIN, SETTINGS.BOT_SPEED_MAX);
     b.hp = 60 + Math.floor(rand(0,40));
-    b.vx = rand(-1,1); b.vy = rand(-1,1);
-    b.nextChange = Date.now() + rand(800,2000);
     b.team = 'bot';
+    b.nextChange = Date.now() + rand(600,2200);
     bots.push(b);
   }
 }
 
-/* -------- helpers -------- */
-function rand(min,max){return Math.random()*(max-min)+min}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-
-/* -------- bullets -------- */
+/* ---------- Bullets ---------- */
 function spawnBullet(x,y,angle,owner){
   bullets.push({
     x,y,
-    vx: Math.cos(angle)*settings.bulletSpeed,
-    vy: Math.sin(angle)*settings.bulletSpeed,
-    r:4,
+    vx: Math.cos(angle)*SETTINGS.BULLET_SPEED,
+    vy: Math.sin(angle)*SETTINGS.BULLET_SPEED,
+    r: 4,
     owner
   });
 }
 
-/* -------- Bot AI: move and shoot toward player -------- */
+/* ---------- Bot AI: movement & shooting ---------- */
 function updateBots(dt){
   for(let b of bots){
     if(b.hp <= 0) continue;
-    // wander and occasional chase
     if(Date.now() > b.nextChange){
-      if(Math.random() < 0.5){
-        let ang = Math.atan2(player.y - b.y, player.x - b.x);
-        b.vx = Math.cos(ang)*b.speed;
-        b.vy = Math.sin(ang)*b.speed;
+      if(Math.random() < 0.6){
+        // chase player
+        const ang = Math.atan2(player.y - b.y, player.x - b.x);
+        b.vx = Math.cos(ang) * b.speed;
+        b.vy = Math.sin(ang) * b.speed;
       } else {
-        let ang = Math.random()*Math.PI*2;
-        b.vx = Math.cos(ang)*b.speed*0.5;
-        b.vy = Math.sin(ang)*b.speed*0.5;
+        const ang = Math.random()*Math.PI*2;
+        b.vx = Math.cos(ang) * b.speed * 0.6;
+        b.vy = Math.sin(ang) * b.speed * 0.6;
       }
-      b.nextChange = Date.now() + rand(600,2200);
+      b.nextChange = Date.now() + rand(700, 2200);
     }
     b.x += b.vx * dt;
     b.y += b.vy * dt;
-    // bounds
-    b.x = clamp(b.x, 20, settings.mapW-20);
-    b.y = clamp(b.y, 20, settings.mapH-20);
+    b.x = clamp(b.x, 20, SETTINGS.MAP_W-20);
+    b.y = clamp(b.y, 20, SETTINGS.MAP_H-20);
 
-    // If close, shoot
+    // shoot when close
     const d = Math.hypot(player.x - b.x, player.y - b.y);
     if(d < 380 && Date.now() - b.lastShot > 700){
-      let ang = Math.atan2(player.y - b.y, player.x - b.x);
+      const ang = Math.atan2(player.y - b.y, player.x - b.x);
       spawnBullet(b.x, b.y, ang, b);
       b.lastShot = Date.now();
     }
   }
 }
 
-/* -------- Bullets update & collision -------- */
+/* ---------- Bullets update & collisions ---------- */
 function updateBullets(dt){
-  for(let i = bullets.length-1; i>=0; i--){
+  for(let i=bullets.length-1;i>=0;i--){
     const bl = bullets[i];
     bl.x += bl.vx * dt;
     bl.y += bl.vy * dt;
-    // bounds removal
-    if(bl.x < 0 || bl.x > settings.mapW || bl.y < 0 || bl.y > settings.mapH){
+    // bounds
+    if(bl.x < 0 || bl.x > SETTINGS.MAP_W || bl.y < 0 || bl.y > SETTINGS.MAP_H){
       bullets.splice(i,1); continue;
     }
-    // owner bot bullet hits player
+    // bot bullets hit player
     if(bl.owner && bl.owner.team === 'bot'){
       if(Math.hypot(player.x - bl.x, player.y - bl.y) < player.r + bl.r){
         player.hp -= 12;
-        bullets.splice(i,1);
-        continue;
+        bullets.splice(i,1); continue;
       }
     } else {
-      // player bullets hit bots
-      for(let j = 0; j < bots.length; j++){
+      // player bullet hits bots
+      for(let j=0;j<bots.length;j++){
         let bo = bots[j];
         if(bo.hp > 0 && Math.hypot(bo.x - bl.x, bo.y - bl.y) < bo.r + bl.r){
           bo.hp -= 40;
@@ -161,23 +161,19 @@ function updateBullets(dt){
     }
   }
   // remove dead bots
-  for(let i=bots.length-1;i>=0;i--){
-    if(bots[i].hp <= 0) bots.splice(i,1);
+  for(let k=bots.length-1;k>=0;k--){
+    if(bots[k].hp <= 0) bots.splice(k,1);
   }
 }
 
-/* -------- Draw world (background, grid optional) -------- */
+/* ---------- Drawing ---------- */
 function drawBackground(cam){
-  // simple animated background gradient (you can replace with image later)
   const g = ctx.createLinearGradient(0,0,0,canvas.height);
-  g.addColorStop(0,'#110606');
-  g.addColorStop(1,'#0b0b0b');
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // subtle map grid to show movement
+  g.addColorStop(0,'#120606'); g.addColorStop(1,'#0b0b0b');
+  ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // subtle grid
   const tile = 100;
-  ctx.strokeStyle = 'rgba(20,20,20,0.6)';
+  ctx.strokeStyle = 'rgba(18,18,18,0.5)';
   ctx.lineWidth = 1;
   for(let x = - (cam.x % tile); x < canvas.width; x += tile){
     for(let y = - (cam.y % tile); y < canvas.height; y += tile){
@@ -186,21 +182,19 @@ function drawBackground(cam){
   }
 }
 
-/* -------- Draw everything -------- */
 function drawAll(cam){
-  // background
   drawBackground(cam);
   // bots
-  for(let b of bots) b.drawSprite(botImg, cam, 40, 40);
+  for(let b of bots) b.draw(cam, 40, 40);
   // player
-  player.drawSprite(playerImg, cam, 46, 46);
-  // pet (follow player)
-  pet.x = player.x + 40; pet.y = player.y + 22;
-  if(petImg.complete) ctx.drawImage(petImg, pet.x - cam.x - 16, pet.y - cam.y - 16, 32, 32);
+  player.draw(cam, 48, 48);
+  // pet
+  pet.x = player.x + 36; pet.y = player.y + 20;
+  if(pet.img && pet.img.complete) ctx.drawImage(pet.img, pet.x - cam.x - 16, pet.y - cam.y - 16, 32, 32);
   // bullets
   for(let bl of bullets){
     ctx.beginPath();
-    ctx.fillStyle = bl.owner && bl.owner.team === 'bot' ? '#ff7070' : '#ffd39b';
+    ctx.fillStyle = (bl.owner && bl.owner.team==='bot') ? '#ff7070' : '#ffd39b';
     ctx.arc(bl.x - cam.x, bl.y - cam.y, bl.r, 0, Math.PI*2);
     ctx.fill();
   }
@@ -217,28 +211,16 @@ function drawAll(cam){
   ctx.fillText('Enemies: '+bots.length, canvas.width - 120, 30);
 }
 
-/* -------- Joystick (simple delta-based) -------- */
+/* ---------- Joystick Implementation ---------- */
 let joystick = { active:false, sx:0, sy:0, dx:0, dy:0 };
-joystickCanvas.addEventListener('touchstart', e=>{
-  e.preventDefault();
-  const t = e.touches[0];
-  joystick.active = true;
-  joystick.sx = t.clientX;
-  joystick.sy = t.clientY;
-});
-joystickCanvas.addEventListener('touchmove', e=>{
-  e.preventDefault();
-  if(!joystick.active) return;
-  const t = e.touches[0];
-  joystick.dx = t.clientX - joystick.sx;
-  joystick.dy = t.clientY - joystick.sy;
-});
-joystickCanvas.addEventListener('touchend', e=>{
-  e.preventDefault();
-  joystick.active = false;
-  joystick.dx = 0; joystick.dy = 0;
-});
+function joystickToPlayerMovement(){
+  if(!joystick.active) return { x:0, y:0 };
+  // dx,dy are relative; scale to speed
+  const speedFactor = 0.13; // tweak sensitivity
+  return { x: joystick.dx * speedFactor, y: joystick.dy * speedFactor };
+}
 
+/* draw joystick UI on joystickCanvas */
 function drawJoystickUI(){
   jctx.clearRect(0,0,joystickCanvas.width, joystickCanvas.height);
   // base
@@ -253,56 +235,82 @@ function drawJoystickUI(){
   jctx.fill();
 }
 
-/* -------- Player shoot control (touch) -------- */
+/* ---------- Hook up joystick touch events ---------- */
+joystickCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  joystick.active = true;
+  // store start relative to joystick element
+  const rect = joystickCanvas.getBoundingClientRect();
+  joystick.sx = t.clientX - rect.left;
+  joystick.sy = t.clientY - rect.top;
+  joystick.dx = 0; joystick.dy = 0;
+});
+joystickCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if(!joystick.active) return;
+  const t = e.touches[0];
+  const rect = joystickCanvas.getBoundingClientRect();
+  const cx = t.clientX - rect.left;
+  const cy = t.clientY - rect.top;
+  joystick.dx = cx - joystick.sx;
+  joystick.dy = cy - joystick.sy;
+  // clamp knob travel
+  const max = 50;
+  if(joystick.dx > max) joystick.dx = max;
+  if(joystick.dx < -max) joystick.dx = -max;
+  if(joystick.dy > max) joystick.dy = max;
+  if(joystick.dy < -max) joystick.dy = -max;
+});
+joystickCanvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  joystick.active = false; joystick.dx = 0; joystick.dy = 0;
+});
+
+/* ---------- Buttons: shoot, kit, jump ---------- */
 let lastPlayerShot = 0;
 shootBtn.addEventListener('touchstart', e=>{
   e.preventDefault();
-  // shoot at closest bot or forward if none
   if(!gameRunning) return;
-  if(bots.length === 0) return;
   const now = Date.now();
-  if(now - lastPlayerShot < 240) return; // cooldown
+  if(now - lastPlayerShot < SETTINGS.PLAYER_COOLDOWN) return;
   lastPlayerShot = now;
-  // choose nearest target
-  let minD = Infinity, target = null;
+  // aim at closest bot
+  if(bots.length === 0) return;
+  let minD = Infinity, tgt = null;
   for(let b of bots){
     const d = Math.hypot(b.x - player.x, b.y - player.y);
-    if(d < minD){ minD = d; target = b; }
+    if(d < minD){ minD = d; tgt = b; }
   }
-  let ang = 0;
-  if(target) ang = Math.atan2(target.y - player.y, target.x - player.x);
+  const ang = tgt ? Math.atan2(tgt.y - player.y, tgt.x - player.x) : 0;
   spawnBullet(player.x, player.y, ang, player);
 });
+kitBtn.addEventListener('touchstart', e=>{ e.preventDefault(); if(!gameRunning) return alert('KIT used (placeholder)') });
+jumpBtn.addEventListener('touchstart', e=>{ e.preventDefault(); if(!gameRunning) return; player.y -= 40; });
 
-/* -------- Game loop -------- */
+/* ---------- Game loop ---------- */
 let last = performance.now();
 function loop(now){
   const dt = (now - last)/1000;
   last = now;
   if(gameRunning){
-    // move player from joystick
-    if(joystick.active){
-      const speed = settings.playerSpeed * dt;
-      // dx,dy are in pixels moved; scale down to not be too fast
-      player.x += joystick.dx * 0.14;
-      player.y += joystick.dy * 0.14;
-    }
-    // clamp player on map
-    player.x = clamp(player.x, 20, settings.mapW-20);
-    player.y = clamp(player.y, 20, settings.mapH-20);
+    // joystick movement to player position
+    const mv = joystickToPlayerMovement();
+    player.x += mv.x * SETTINGS.PLAYER_SPEED * dt;
+    player.y += mv.y * SETTINGS.PLAYER_SPEED * dt;
+    // clamp on map
+    player.x = clamp(player.x, 20, SETTINGS.MAP_W-20);
+    player.y = clamp(player.y, 20, SETTINGS.MAP_H-20);
 
-    // update bots and bullets
+    // update bots & bullets
     updateBots(dt);
     updateBullets(dt);
 
-    // update viewport
+    // viewport center on player
     viewport.w = canvas.width; viewport.h = canvas.height;
-    viewport.x = player.x - viewport.w/2;
-    viewport.y = player.y - viewport.h/2;
-    viewport.x = clamp(viewport.x, 0, settings.mapW - viewport.w);
-    viewport.y = clamp(viewport.y, 0, settings.mapH - viewport.h);
+    viewport.x = clamp(player.x - viewport.w/2, 0, SETTINGS.MAP_W - viewport.w);
+    viewport.y = clamp(player.y - viewport.h/2, 0, SETTINGS.MAP_H - viewport.h);
 
-    // draw
     drawAll(viewport);
     drawJoystickUI();
 
@@ -310,7 +318,8 @@ function loop(now){
     if(player.hp <= 0){ gameRunning = false; setTimeout(()=>alert('You were defeated. Refresh to play again.'),50); }
     if(bots.length === 0 && gameRunning){ gameRunning = false; setTimeout(()=>alert('You win! All enemies down.'),50); }
   } else {
-    // when not running, still draw background so player sees something
+    // idle background + joystick UI
+    // simple background so user sees something even before start
     drawBackground(viewport);
     drawJoystickUI();
   }
@@ -318,18 +327,22 @@ function loop(now){
 }
 requestAnimationFrame(loop);
 
-/* -------- Start button -------- */
+/* ---------- Start button ---------- */
 startBtn.addEventListener('click', ()=>{
   const name = nameInput.value.trim();
   if(name.length === 0){ alert('Enter your name'); return; }
   player.name = name;
-  // reset
-  player.x = settings.mapW/2; player.y = settings.mapH/2; player.hp = 100;
-  spawnBots(settings.botCount);
+  player.x = SETTINGS.MAP_W/2; player.y = SETTINGS.MAP_H/2; player.hp = 100;
+  spawnBots(SETTINGS.BOT_COUNT);
   bullets = [];
-  gameRunning = true;
+  // hide login
   document.getElementById('login-screen').style.display = 'none';
+  gameRunning = true;
 });
 
-/* -------- Utility: quick random range int -------- */
-function randInt(min,max){ return Math.floor(rand(min,max+1)); }
+/* ---------- Utility ---------- */
+function drawBackground(cam){
+  const g = ctx.createLinearGradient(0,0,0,canvas.height);
+  g.addColorStop(0,'#110606'); g.addColorStop(1,'#0b0b0b');
+  ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+       }
