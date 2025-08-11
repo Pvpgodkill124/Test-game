@@ -1,20 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
-  <title>Free Zone Classic - FZC v2</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+  <title>FZC v2 - Free Zone Classical</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- LOGIN / LOBBY -->
   <div id="login-screen">
     <h1>FREE ZONE CLASSIC</h1>
-    <input type="text" id="player-name" placeholder="Enter your name" />
+    <input id="player-name" placeholder="Enter name" />
     <button id="start-btn">START</button>
   </div>
 
+  <!-- GAME CANVAS -->
   <canvas id="gameCanvas"></canvas>
 
+  <!-- CONTROLS: joystick (canvas) + right-panel buttons -->
   <div id="controls">
     <canvas id="joystick" width="140" height="140"></canvas>
     <div id="rightButtons">
