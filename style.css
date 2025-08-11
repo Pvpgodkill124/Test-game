@@ -1,22 +1,20 @@
-/* Dark red / black / gold theme */
+/* FZC v2 — Dark red / black / gold */
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#0b0b0b;color:#fff;font-family:Arial,Helvetica,sans-serif;}
+html,body{height:100%;width:100%;background:#070606;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
 #login-screen{
   position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:linear-gradient(180deg,#070606 0%, rgba(24,6,6,0.8) 60%);
-  color:#b8860b;
+  background:linear-gradient(180deg,#060507 0%, rgba(20,8,8,0.85) 60%);color:#b8860b;z-index:40;
 }
-#login-screen h1{font-size:28px;margin-bottom:18px;letter-spacing:2px}
-#player-name{padding:10px 12px;font-size:16px;border-radius:8px;border:1px solid #311; background:rgba(255,255,255,0.03); color:#fff; width:70%; max-width:360px}
+#login-screen h1{font-size:30px;margin-bottom:14px;letter-spacing:2px}
+#player-name{padding:10px 12px;font-size:16px;border-radius:8px;border:1px solid rgba(255,255,255,0.03); background:rgba(255,255,255,0.02);color:#fff;width:72%;max-width:420px}
 #start-btn{margin-top:12px;padding:10px 20px;background:#b8860b;border:none;color:#111;font-weight:700;border-radius:8px}
 
-#gameCanvas{display:block;width:100vw;height:calc(100vh - 140px); background:#111; touch-action:none}
+#gameCanvas{display:block;background:#0b0b0b;width:100vw;height:100vh;touch-action:none}
 
 #controls{
-  position:fixed;left:0;right:0;bottom:0;height:140px;display:flex;justify-content:space-between;align-items:flex-end;padding:12px 18px;
-  pointer-events:none;
+  position:fixed;left:0;right:0;bottom:8px;height:160px;pointer-events:none;display:flex;justify-content:space-between;padding:8px 18px;align-items:flex-end;
 }
-#joystick{border-radius:14px; background:rgba(255,255,255,0.03); box-shadow:0 6px 0 rgba(0,0,0,0.45); pointer-events:auto}
-#rightButtons{display:flex;flex-direction:column;gap:10px; pointer-events:auto}
-.action{background:#b8860b;color:#111;padding:12px 18px;border-radius:10px;border:none;font-weight:700;box-shadow:0 6px 0 rgba(0,0,0,0.35)}
-@media(min-width:900px){#gameCanvas{height:calc(100vh - 90px)}#controls{height:90px}}
+#joystick{border-radius:16px;background:rgba(255,255,255,0.02);box-shadow:0 6px 0 rgba(0,0,0,0.45);pointer-events:auto}
+#rightButtons{display:flex;flex-direction:column;gap:10px;pointer-events:auto}
+.action{background:#b8860b;color:#111;padding:14px 18px;border-radius:10px;border:none;font-weight:700;box-shadow:0 6px 0 rgba(0,0,0,0.35);min-width:86px;text-align:center}
+@media(min-width:900px){#controls{height:110px}#joystick{width:120px;height:120px}}
